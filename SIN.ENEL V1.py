@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[61]:
+# In[ ]:
 
 
 from docx2pdf import convert
@@ -71,42 +71,8 @@ my_canvas['background'] = 'white'
 my_canvas.create_window((0,0), window=second_frame , anchor="nw" )
 
 
-
 #Funcoes  
-_projections = {}
-def zone(coordinates):
-        if 56 <= coordinates[0] < 64 and 3 <= coordinates[1] < 12:
-            return 32
-        if 72 <= coordinates[0] < 84 and 0 <= coordinates[1] < 42:
-            if coordinates[1] < 9:
-                return 31
-            elif coordinates[1] < 21:
-                return 33
-            elif coordinates[1] < 33:
-                return 35
-            return 37
-        return int((coordinates[1] + 180) / 6) + 1
 
-def letter(coordinates):
-        return 'CDEFGHJKLMNPQRSTUVWXX'[int((coordinates[0] + 80) / 8)]
-
-def project(coordinates):
-        z = zone(coordinates)
-        l = letter(coordinates)
-        if z not in _projections:
-            _projections[z] = pyproj.Proj(proj='utm', zone=z, ellps='WGS84')
-        x, y = _projections[z](coordinates[1], coordinates[0])
-        if y < 0:
-            y += 10000000
-        return z, l, x, y
-
-def unproject(z, l, x, y):
-        if z not in _projections:
-            _projections[z] = pyproj.Proj(proj='utm', zone=z, ellps='WGS84')
-        if l < 'N':
-            y -= 10000000
-        lng, lat = _projections[z](x, y, inverse=True)
-        return (lng, lat)
 #Função para checar se os campos estão preenchidos
 def checkVariaveis(a,b,c1,c2,d,e,f,g,h,i,j):
 
@@ -132,23 +98,7 @@ def checkVariaveis(a,b,c1,c2,d,e,f,g,h,i,j):
         messagebox.showinfo(message="É necessário preencher a tensão secundária do transformador!")
         return 0
     
-def deg_to_dms(deg, pretty_print=None, ndp=4):
-    m, s = divmod(abs(deg)*3600, 60)
-    d, m = divmod(m, 60)
-    if deg < 0:
-        d = -d
-    d, m = int(d), int(m)
 
-    if pretty_print:
-        if pretty_print=='latitude':
-            hemi = 'N' if d>=0 else 'S'
-        elif pretty_print=='longitude':
-            hemi = 'L' if d>=0 else 'O'
-        else:
-            hemi = '?'
-        return '{d:d}° {m:d}′ {s:.{ndp:d}f}″ {hemi:1s}'.format(
-                    d=abs(d), m=m, s=s, hemi=hemi, ndp=ndp)
-    return d, m, s
 
 def backup():
     
@@ -197,7 +147,7 @@ def backup():
     RGRepresentanteLegalUm.insert(0,dict[49])
     OrgaoEmissorRGUm.insert(0,dict[50])
     CargoUm.insert(0,dict[51])
-    CotaUm.insert(0,dict[52])
+    ProfissaoUM.insert(0,dict[52])
     TelefoneCelularRepresentanteLegalUm.insert(0,dict[53])
     EmailRepresentanteLegalUm.insert(0,dict[54])
     RepresentanteLegalDois.insert(0,dict[55])
@@ -205,7 +155,7 @@ def backup():
     RGRepresentanteLegalDois.insert(0,dict[57])
     OrgaoEmissorRGDois.insert(0,dict[58])
     CargoDois.insert(0,dict[59])
-    CotaDois.insert(0,dict[60])
+    ProfissaoDois.insert(0,dict[60])
     TelefoneCelularRepresentanteLegalDois.insert(0,dict[61])
     EmailRepresentanteLegalDois.insert(0,dict[62])
     PrevisaoEnergizacao.insert(0,dict[63])
@@ -227,42 +177,21 @@ def imp():
     QCPotAtiva = str(float(QuantidadeKwca) + 3.4)
     QCPotAparente = str(float(QuantidadeKwca) + 4.25)
     
-    #convertendo coordenada para usar no RCG
+    #dividindo coordenadas
     Loc = LocalizacaoEnel.get()
-    chars = '°º'
-    Loc = Loc.translate(str.maketrans('', '', chars))
     Loc = Loc.split(",")
-    Loc = str(deg_to_dms(float(Loc[0]), pretty_print='latitude')) +" , " + '\n'+  str(deg_to_dms(float(Loc[1]), pretty_print='longitude'))
-    CoordenadasGMSParaRCG = Loc
+    Latitude = Loc[0]
+    Longitude = Loc[1]
     
-    #convertendo coordenadas para UTM
-    LocUTM = LocalizacaoEnel.get()
-    chars = '°º'
-    LocUTM = LocUTM.translate(str.maketrans('', '', chars))
-    LocUTM = LocUTM.split(",")
-    coordinate = [float(LocUTM[0]) , float(LocUTM[1])]
-    z,l,x,y = project(coordinate)
-    lng,lat = unproject(z,l,x,y)
-    crd=[lat,lng]
-    a,b,c,d = project(crd)
-    CoordenadasUTM = str(round(c,2)) + " m E ,  \n" + str(round(d,2)) + " m S" + " ,  Zona: " + str(a) + str(b)
+    #Data Atual
     data_atual = date.today()
     dataAtual = data_atual.strftime('%d/%m/%Y')
     
+    AreaArranjo = str(float(AreaTotal) / float(QuantidadeInversor.get()))
+    PotPicoArranjo =  str(float(QuantidadeKwp) / float(QuantidadeInversor.get()))
     
-    document = Document(caminho) #deve ser variavel caminho
-     #creating style
-    styles = document.styles
-    style = styles.add_style('titulo', WD_STYLE_TYPE.PARAGRAPH)
-    font = style.font
-    font.name = 'Arial'
-    font.size = Pt(18)
-    font.bold = True
-    font.color.rgb = RGBColor(19, 40,105)
-    
-    
-    
-    CorrenteCalculadaTransformador = (float(13.8)/(12 * 1.732 ))
+    #Corrente no transformador
+    CorrenteCalculadaTransformador = ((float(PotenciaTransformador.get()))/(13.8 * 1.732 ))
     CorrenteCalculadaTransformador = str(round(CorrenteCalculadaTransformador,1))
     
     #Tratamento de endereço dinâmico
@@ -288,7 +217,17 @@ def imp():
     
     if len(UfTitular.get())==0:
         UfTitular.set(addressTitular['uf'])
+        
+        
+    if len(CidadeContatoComercial.get())== 0:
+        CidadeContatoComercial.set(addressComercial['cidade'])
     
+    if len(RuaContatoComercial.get())==0:
+        RuaContatoComercial.set(addressComercial['logradouro'])
+        
+    if len(BairroContatoComercial.get())==0:
+        BairroContatoComercial.set(addressComercial['bairro'])  
+        
     
     if (TipoTransformador.get()).upper() == "A SECO":
         CorrenteInrush = "14"
@@ -302,207 +241,11 @@ def imp():
     if Uc.get() != 1 :
         NumeroUc_final = NumeroUc.get()
         
-        
-
-
-    for p in document.paragraphs:
-        
-        if '$PotenciaTotalTransformadores' in p.text:
-            p.text = p.text.replace('$PotenciaTotalTransformadores', PotenciaTotalTransformadores)
-            
-        if '$Rele' in p.text:
-            p.text = p.text.replace('$Rele', rele.get())
-        if '$FabricanteRele' in p.text:
-            p.text = p.text.replace('$FabricanteRele', FabricanteRele.get())
-            
-        if '$QuantidadeTransformadores' in p.text:
-            p.text = p.text.replace('$QuantidadeTransformadores', QuantidadeTransformadores.get())
-        if '$CidadeEnel' in p.text:
-            p.text = p.text.replace('$CidadeEnel', CidadeEnel.get())
-        if '$NumProjeto' in p.text:
-            p.text = p.text.replace('$NumProjeto', NumProjeto.get())
-        if '$NomeUsina' in p.text:
-            p.text = p.text.replace('$NomeUsina', NomeUsina.get())
-        if '$TitularUc' in p.text:
-            p.text = p.text.replace('$TitularUc', TitularUc.get())
-        if '$CNPJ' in p.text:
-            p.text = p.text.replace('$CNPJ', CNPJ.get())
-        if '$RuaEnel' in p.text:
-            p.text = p.text.replace('$RuaEnel', RuaEnel.get())  
-        if '$NrEnel' in p.text:
-            p.text = p.text.replace('$NrEnel', NrEnel.get())
-        if '$BairroEnel' in p.text:
-            p.text = p.text.replace('$BairroEnel', BairroEnel.get())
-        if '$CepEnel' in p.text:
-            p.text = p.text.replace('$CepEnel', CepEnel.get())
-        if '$LocalizacaoEnel' in p.text:
-            p.text = p.text.replace('$LocalizacaoEnel', LocalizacaoEnel.get())
-        if '$ModeloModulo' in p.text:
-            p.text = p.text.replace('$ModeloModulo', ModeloModulo.get())
-        if '$PotenciaModulo' in p.text:
-            p.text = p.text.replace('$PotenciaModulo', PotenciaModulo.get())
-        if '$QuantidadeTotalModulos' in p.text:
-            p.text = p.text.replace('$QuantidadeTotalModulos', QuantidadeTotalModulos.get())
-        if '$ModeloInversor' in p.text:
-            p.text = p.text.replace('$ModeloInversor', ModeloInversor.get())
-        if '$PotenciaInversor' in p.text:
-            p.text = p.text.replace('$PotenciaInversor', PotenciaInversor.get())   
-        if '$QuantidadeInversor' in p.text:
-            p.text = p.text.replace('$QuantidadeInversor', QuantidadeInversor.get())
-        if '$TipoDeEstrutura' in p.text:
-            p.text = p.text.replace('$TipoDeEstrutura', TipoDeEstrutura.get())
-        if '$AreaTotal' in p.text:
-            p.text = p.text.replace('$AreaTotal', AreaTotal)
-        if '$FabricanteModulo' in p.text:
-            p.text = p.text.replace('$FabricanteModulo', FabricanteModulo.get())
-        if '$QuantidadeKwp' in p.text:
-            p.text = p.text.replace('$QuantidadeKwp', QuantidadeKwp)
-        if '$QuantidadeKwca' in p.text:
-            p.text = p.text.replace('$QuantidadeKwca', QuantidadeKwca)
-        if '$QuantidadeModulosPorInversor' in p.text:
-            p.text = p.text.replace('$QuantidadeModulosPorInversor', QuantidadeModulosPorInversor)
-        if '$PotenciaCCPorInversor' in p.text:
-            p.text = p.text.replace('$PotenciaCCPorInversor', PotenciaCCPorInversor)
-        if '$FabricanteInversor' in p.text:
-            p.text = p.text.replace('$FabricanteInversor', FabricanteInversor.get())
-        if '$PotenciaTransformador' in p.text:
-            p.text = p.text.replace('$PotenciaTransformador', PotenciaTransformador.get())
-        if '$TipoTransformador' in p.text:
-            p.text = p.text.replace('$TipoTransformador', TipoTransformador.get())
-        if '$TensaoSecundario' in p.text:
-            p.text = p.text.replace('$TensaoSecundario', TensaoSecundario.get())
-        if '$NumeroUc' in p.text:
-            p.text = p.text.replace('$NumeroUc', NumeroUc_final)
-        if '$ART' in p.text:
-            p.text = p.text.replace('$ART', ART.get())
-        if '$NivelIsolacao' in p.text:
-            p.text = p.text.replace('$NivelIsolacao', NivelIsolacao.get())
-        if '$CorrenteTransformador' in p.text:
-            p.text = p.text.replace('$CorrenteTransformador', CorrenteCalculadaTransformador)  
-        if '$CorrenteSaidaInversor' in p.text:
-            p.text = p.text.replace('$CorrenteSaidaInversor', CorrenteSaidaInversor.get())
-            
-        if QuantidadeTransformadores.get() != '1' and QuantidadeTransformadores.get() !='um':
-            if 'O transformador será instalado' in p.text:
-                p.text = p.text.replace('O transformador será instalado', 'Os transformadores serão instalados')
-            if 'O transformador será alimentado' in p.text:
-                p.text = p.text.replace('O transformador será alimentado', 'Os transformadores serão alimentados')
-            if 'ao transformador será instalado um painel de média' in p.text:
-                p.text = p.text.replace('ao transformador será instalado um painel de média', 'aos transformadores serão instalados painéis de média')
-                
-
-    paragraph = document.paragraphs[2]
-    paragraph.style = 'titulo'
-    paragraph = document.paragraphs[0]
-    paragraph.style = 'titulo'
-    paragraph = document.paragraphs[1]
-    paragraph.style = 'titulo'
-    paragraph = document.paragraphs[3]
-    paragraph.style = 'titulo'
-    
-    document.save(output + "\PRJ_" + NumProjeto.get() + "_MD_SE.docx")
-    
-#************************************ PREENCHENDO MD DE FV *****************************************************     
-    caminho2 = caminho.replace("\Python_ENEL_MD_SE_Base_16092022.docx", "\Python_ENEL_MD_FV_Base_16092022.docx") 
-    document = Document(caminho2)
-    for p in document.paragraphs:
-        if '$CidadeEnel' in p.text:
-            p.text = p.text.replace('$CidadeEnel', CidadeEnel.get())
-        if '$NumProjeto' in p.text:
-            p.text = p.text.replace('$NumProjeto', NumProjeto.get())
-        if '$NomeUsina' in p.text:
-            p.text = p.text.replace('$NomeUsina', NomeUsina.get())
-        if '$TitularUc' in p.text:
-            p.text = p.text.replace('$TitularUc', TitularUc.get())
-        if '$CNPJ' in p.text:
-            p.text = p.text.replace('$CNPJ', CNPJ.get())
-        if '$RuaEnel' in p.text:
-            p.text = p.text.replace('$RuaEnel', RuaEnel.get())  
-        if '$NrEnel' in p.text:
-            p.text = p.text.replace('$NrEnel', NrEnel.get())
-        if '$BairroEnel' in p.text:
-            p.text = p.text.replace('$BairroEnel', BairroEnel.get())
-        if '$CepEnel' in p.text:
-            p.text = p.text.replace('$CepEnel', CepEnel.get())
-        if '$LocalizacaoEnel' in p.text:
-            p.text = p.text.replace('$LocalizacaoEnel', LocalizacaoEnel.get())
-        if '$ModeloModulo' in p.text:
-            p.text = p.text.replace('$ModeloModulo', ModeloModulo.get())
-        if '$PotenciaModulo' in p.text:
-            p.text = p.text.replace('$PotenciaModulo', PotenciaModulo.get())
-        if '$QuantidadeTotalModulos' in p.text:
-            p.text = p.text.replace('$QuantidadeTotalModulos', QuantidadeTotalModulos.get())
-        if '$ModeloInversor' in p.text:
-            p.text = p.text.replace('$ModeloInversor', ModeloInversor.get())
-        if '$PotenciaInversor' in p.text:
-            p.text = p.text.replace('$PotenciaInversor', PotenciaInversor.get())   
-        if '$QuantidadeInversor' in p.text:
-            p.text = p.text.replace('$QuantidadeInversor', QuantidadeInversor.get())
-        if '$TipoDeEstrutura' in p.text:
-            p.text = p.text.replace('$TipoDeEstrutura', TipoDeEstrutura.get())
-        if '$AreaTotal' in p.text:
-            p.text = p.text.replace('$AreaTotal', AreaTotal)
-        if '$FabricanteModulo' in p.text:
-            p.text = p.text.replace('$FabricanteModulo', FabricanteModulo.get())
-        if '$QuantidadeKwp' in p.text:
-            p.text = p.text.replace('$QuantidadeKwp', QuantidadeKwp)
-        if '$QuantidadeKwca' in p.text:
-            p.text = p.text.replace('$QuantidadeKwca', QuantidadeKwca)
-        if '$QuantidadeModulosPorInversor' in p.text:
-            p.text = p.text.replace('$QuantidadeModulosPorInversor', QuantidadeModulosPorInversor)
-        if '$PotenciaCCPorInversor' in p.text:
-            p.text = p.text.replace('$PotenciaCCPorInversor', PotenciaCCPorInversor)
-        if '$FabricanteInversor' in p.text:
-            p.text = p.text.replace('$FabricanteInversor', FabricanteInversor.get())
-        if '$TensaoAtendimento' in p.text:
-            p.text = p.text.replace('$TensaoAtendimento', TensaoAtendimento)
-        if '$Taps' in p.text:
-            p.text = p.text.replace('$Taps', Taps)
-        if '$PotenciaTransformador' in p.text:
-            p.text = p.text.replace('$PotenciaTransformador', PotenciaTransformador.get())
-        if '$TipoTransformador' in p.text:
-            p.text = p.text.replace('$TipoTransformador', TipoTransformador.get())
-        if '$TensaoSecundario' in p.text:
-            p.text = p.text.replace('$TensaoSecundario', TensaoSecundario.get())
-        if '$NumeroUc' in p.text:
-            p.text = p.text.replace('$NumeroUc', NumeroUc_final)
-        if '$ART' in p.text:
-            p.text = p.text.replace('$ART', ART.get())
-        if '$NivelIsolacao' in p.text:
-            p.text = p.text.replace('$NivelIsolacao', NivelIsolacao.get())
-        if '$CorrenteTransformador' in p.text:
-            p.text = p.text.replace('$CorrenteTransformador', CorrenteCalculadaTransformador)  
-        if '$CorrenteSaidaInversor' in p.text:
-            p.text = p.text.replace('$CorrenteSaidaInversor', CorrenteSaidaInversor.get())
-            
-        if QuantidadeTransformadores.get() != '1' and QuantidadeTransformadores.get() !='um':
-            if 'O transformador será instalado' in p.text:
-                p.text = p.text.replace('O transformador será instalado', 'Os transformadores serão instalados')
-            if 'O transformador será alimentado' in p.text:
-                p.text = p.text.replace('O transformador será alimentado', 'Os transformadores serão alimentados')
-            if 'ao transformador será instalado um painel de média' in p.text:
-                p.text = p.text.replace('ao transformador será instalado um painel de média', 'aos transformadores serão instalados painéis de média')
-    styles = document.styles
-    style = styles.add_style('titulo', WD_STYLE_TYPE.PARAGRAPH)
-    font = style.font
-    font.name = 'Arial'
-    font.size = Pt(18)
-    font.bold = True
-    font.color.rgb = RGBColor(19, 40,105)
-    paragraph = document.paragraphs[2]
-    paragraph.style = 'titulo'
-    paragraph = document.paragraphs[0]
-    paragraph.style = 'titulo'
-    paragraph = document.paragraphs[1]
-    paragraph.style = 'titulo'
-    paragraph = document.paragraphs[3]
-    paragraph.style = 'titulo'
-    document.save(output + "\PRJ_" + NumProjeto.get() + "_MD_FV.docx")
 #************************************ PREENCHENDO CRONOGRAMA *****************************************************     
     if len(PrevisaoEnergizacao.get()) == 0 :
         locale.setlocale(locale.LC_ALL, 'pt_BR.utf8')
-        caminho8 = caminho.replace("\Python_ENEL_MD_SE_Base_16092022.docx", "\Python_Cronograma_Base_06092022.docx") 
-        document = Document(caminho8)
+        caminho3 = caminho.replace("\Python_ENEL_MD_SE_Base_16092022.docx", "\Python_Cronograma_Base_06092022.docx") 
+        document = Document(caminho3)
    
         InicioParecer = date.today()
         
@@ -619,75 +362,359 @@ def imp():
                             cell.text = cell.text.replace('$DiasComissionamento', str(DiasComissionamento))
                             cell.text = cell.text.replace('$DiasEnergizacao', str(DiasEnergizacao))
         
-        document.save(output + "\PRJ_" + NumProjeto.get() + "_Cronograma.docx")    
-
-#************************************ LISTA DE MATERIAIS ************************************   
-    
-    if len(String_ModeloTP1.get()) == 0:
-            String_ModeloTP1.set("BDEC - FF26S")
-    if len(String_FabricanteTP1.get()) == 0:
-            String_FabricanteTP1.set("ISOLET")
-    if len(String_ModeloTP2.get()) == 0:
-            String_ModeloTP2.set("BDE - FT26C")
-    planilha = caminhoIcone.replace("\Python_ENEL_MD_SE_Base_16092022.docx", "\Python_ENEL_Anexo_C_Base_16092022.xlsx") 
+    document.save(output + "\PRJ_" + NumProjeto.get() + "_CRONOGRAMA.docx")  
         
-    wb = load_workbook(filename = planilha)
+#************************************ PREENCHENDO MD DE SE *****************************************************     
+    
+    document = Document(caminho)
 
+    #creating style
+    styles = document.styles
+    style = styles.add_style('titulo', WD_STYLE_TYPE.PARAGRAPH)
+    font = style.font
+    font.name = 'Arial'
+    font.size = Pt(18)
+    font.bold = True
+    font.color.rgb = RGBColor(19, 40,105)
+    
+    for p in document.paragraphs:   
+
+        if '$CidadeEnel' in p.text:
+            p.text = p.text.replace('$CidadeEnel', CidadeEnel.get())
+        if '$NumProjeto' in p.text:
+            p.text = p.text.replace('$NumProjeto', NumProjeto.get())
+        if '$NomeUsina' in p.text:
+            p.text = p.text.replace('$NomeUsina', NomeUsina.get())
+        if '$TitularUc' in p.text:
+            p.text = p.text.replace('$TitularUc', TitularUc.get())
+        if '$CNPJ' in p.text:
+            p.text = p.text.replace('$CNPJ', CNPJ.get())
+        if '$RuaEnel' in p.text:
+            p.text = p.text.replace('$RuaEnel', RuaEnel.get())  
+        if '$NrEnel' in p.text:
+            p.text = p.text.replace('$NrEnel', NrEnel.get())
+        if '$BairroEnel' in p.text:
+            p.text = p.text.replace('$BairroEnel', BairroEnel.get())
+        if '$CepEnel' in p.text:
+            p.text = p.text.replace('$CepEnel', CepEnel.get())
+        if '$LocalizacaoEnel' in p.text:
+            p.text = p.text.replace('$LocalizacaoEnel', LocalizacaoEnel.get())
+        if '$ModeloModulo' in p.text:
+            p.text = p.text.replace('$ModeloModulo', ModeloModulo.get())
+        if '$PotenciaModulo' in p.text:
+            p.text = p.text.replace('$PotenciaModulo', PotenciaModulo.get())
+        if '$QuantidadeTotalModulos' in p.text:
+            p.text = p.text.replace('$QuantidadeTotalModulos', QuantidadeTotalModulos.get())
+        if '$ModeloInversor' in p.text:
+            p.text = p.text.replace('$ModeloInversor', ModeloInversor.get())
+        if '$PotenciaInversor' in p.text:
+            p.text = p.text.replace('$PotenciaInversor', PotenciaInversor.get())   
+        if '$QuantidadeInversor' in p.text:
+            p.text = p.text.replace('$QuantidadeInversor', QuantidadeInversor.get())
+        if '$TipoDeEstrutura' in p.text:
+            p.text = p.text.replace('$TipoDeEstrutura', TipoDeEstrutura.get())
+        if '$AreaTotal' in p.text:
+            p.text = p.text.replace('$AreaTotal', AreaTotal)
+        if '$FabricanteModulo' in p.text:
+            p.text = p.text.replace('$FabricanteModulo', FabricanteModulo.get())
+        if '$QuantidadeKwp' in p.text:
+            p.text = p.text.replace('$QuantidadeKwp', QuantidadeKwp)
+        if '$QuantidadeKwca' in p.text:
+            p.text = p.text.replace('$QuantidadeKwca', QuantidadeKwca)
+        if '$QuantidadeModulosPorInversor' in p.text:
+            p.text = p.text.replace('$QuantidadeModulosPorInversor', QuantidadeModulosPorInversor)
+        if '$PotenciaCCPorInversor' in p.text:
+            p.text = p.text.replace('$PotenciaCCPorInversor', PotenciaCCPorInversor)
+        if '$FabricanteInversor' in p.text:
+            p.text = p.text.replace('$FabricanteInversor', FabricanteInversor.get())
+        if '$PotenciaTransformador' in p.text:
+            p.text = p.text.replace('$PotenciaTransformador', PotenciaTransformador.get())
+        if '$TipoTransformador' in p.text:
+            p.text = p.text.replace('$TipoTransformador', TipoTransformador.get())
+        if '$TensaoSecundario' in p.text:
+            p.text = p.text.replace('$TensaoSecundario', TensaoSecundario.get())
+        if '$NumeroUc' in p.text:
+            p.text = p.text.replace('$NumeroUc', NumeroUc_final)
+        if '$ART' in p.text:
+            p.text = p.text.replace('$ART', ART.get())
+        if '$NivelIsolacao' in p.text:
+            p.text = p.text.replace('$NivelIsolacao', NivelIsolacao.get())
+        if '$CorrenteTransformador' in p.text:
+            p.text = p.text.replace('$CorrenteTransformador', CorrenteCalculadaTransformador)  
+        if '$CorrenteSaidaInversor' in p.text:
+            p.text = p.text.replace('$CorrenteSaidaInversor', CorrenteSaidaInversor.get())
+                            
+        if QuantidadeTransformadores.get() != '1' and QuantidadeTransformadores.get() !='um':
+            if 'O transformador será instalado' in p.text:
+                p.text = p.text.replace('O transformador será instalado', 'Os transformadores serão instalados')
+            if 'O transformador será alimentado' in p.text:
+                p.text = p.text.replace('O transformador será alimentado', 'Os transformadores serão alimentados')
+            if 'ao transformador será instalado um painel de média' in p.text:
+                p.text = p.text.replace('ao transformador será instalado um painel de média', 'aos transformadores serão instalados painéis de média')
+        if '$PrevisaoEnergizacao' in p.text:
+            if len(PrevisaoEnergizacao.get()) != 0 :
+                p.text = p.text.replace('$PrevisaoEnergizacao', PrevisaoEnergizacao.get())
+            if len(PrevisaoEnergizacao.get()) == 0 :
+                p.text = p.text.replace('$PrevisaoEnergizacao', FinalEnergizacao)
+        if '$PotenciaTotalTransformadores' in p.text:
+                p.text = p.text.replace('$PotenciaTotalTransformadores', PotenciaTotalTransformadores)
+            
+        if '$Rele' in p.text:
+            p.text = p.text.replace('$Rele', Rele.get())
+        if '$FabricanteRele' in p.text:
+            p.text = p.text.replace('$FabricanteRele', FabricanteRele.get())
+            
+        if '$QuantidadeTransformadores' in p.text:
+            p.text = p.text.replace('$QuantidadeTransformadores', QuantidadeTransformadores.get())
+                            
+    paragraph = document.paragraphs[2]
+    paragraph.style = 'titulo'
+    paragraph = document.paragraphs[0]
+    paragraph.style = 'titulo'
+    paragraph = document.paragraphs[1]
+    paragraph.style = 'titulo'
+    paragraph = document.paragraphs[3]
+    paragraph.style = 'titulo'    
+    
+    table = document.tables[0]
+    rowOne = table.rows[1]
+    cell = rowOne.cells[0] 
+    cell.text = ModeloInversor.get()
+
+    rowOne = table.rows[1]
+    cell = rowOne.cells[1] #quantidade Inversor
+    cell.text = QuantidadeInversor.get()
+
+    rowOne = table.rows[1]
+    cell = rowOne.cells[2] #potenciaInversor.000
+    cell.text = PotenciaInversor.get() + '.000'
+    rowOne = table.rows[1]
+    cell = rowOne.cells[3] #QuantidadeKwca
+    cell.text = QuantidadeKwca
+    rowOne = table.rows[1]
+    cell = rowOne.cells[5] #QuantidadeKwca
+    cell.text = QuantidadeKwca
+
+    rowOne = table.rows[4]
+    cell = rowOne.cells[5] #QCPotAparente
+    cell.text = QCPotAparente
+
+    rowOne = table.rows[4]
+    cell = rowOne.cells[3] #QCPotAtiva
+    cell.text = QCPotAtiva
+    
+    document.save(output + "\PRJ_" + NumProjeto.get() + "_MD_SE.docx")
+    
+#************************************ PREENCHENDO MD DE FV *****************************************************     
+    caminho2 = caminho.replace("\Python_ENEL_MD_SE_Base_16092022.docx", "\Python_ENEL_MD_FV_Base_16092022.docx") 
+    document = Document(caminho2)
+    for p in document.paragraphs:
+        if '$CidadeEnel' in p.text:
+            p.text = p.text.replace('$CidadeEnel', CidadeEnel.get())
+        if '$NumProjeto' in p.text:
+            p.text = p.text.replace('$NumProjeto', NumProjeto.get())
+        if '$NomeUsina' in p.text:
+            p.text = p.text.replace('$NomeUsina', NomeUsina.get())
+        if '$TitularUc' in p.text:
+            p.text = p.text.replace('$TitularUc', TitularUc.get())
+        if '$CNPJ' in p.text:
+            p.text = p.text.replace('$CNPJ', CNPJ.get())
+        if '$RuaEnel' in p.text:
+            p.text = p.text.replace('$RuaEnel', RuaEnel.get())  
+        if '$NrEnel' in p.text:
+            p.text = p.text.replace('$NrEnel', NrEnel.get())
+        if '$BairroEnel' in p.text:
+            p.text = p.text.replace('$BairroEnel', BairroEnel.get())
+        if '$CepEnel' in p.text:
+            p.text = p.text.replace('$CepEnel', CepEnel.get())
+        if '$LocalizacaoEnel' in p.text:
+            p.text = p.text.replace('$LocalizacaoEnel', LocalizacaoEnel.get())
+        if '$ModeloModulo' in p.text:
+            p.text = p.text.replace('$ModeloModulo', ModeloModulo.get())
+        if '$PotenciaModulo' in p.text:
+            p.text = p.text.replace('$PotenciaModulo', PotenciaModulo.get())
+        if '$QuantidadeTotalModulos' in p.text:
+            p.text = p.text.replace('$QuantidadeTotalModulos', QuantidadeTotalModulos.get())
+        if '$ModeloInversor' in p.text:
+            p.text = p.text.replace('$ModeloInversor', ModeloInversor.get())
+        if '$PotenciaInversor' in p.text:
+            p.text = p.text.replace('$PotenciaInversor', PotenciaInversor.get())   
+        if '$QuantidadeInversor' in p.text:
+            p.text = p.text.replace('$QuantidadeInversor', QuantidadeInversor.get())
+        if '$TipoDeEstrutura' in p.text:
+            p.text = p.text.replace('$TipoDeEstrutura', TipoDeEstrutura.get())
+        if '$AreaTotal' in p.text:
+            p.text = p.text.replace('$AreaTotal', AreaTotal)
+        if '$FabricanteModulo' in p.text:
+            p.text = p.text.replace('$FabricanteModulo', FabricanteModulo.get())
+        if '$QuantidadeKwp' in p.text:
+            p.text = p.text.replace('$QuantidadeKwp', QuantidadeKwp)
+        if '$QuantidadeKwca' in p.text:
+            p.text = p.text.replace('$QuantidadeKwca', QuantidadeKwca)
+        if '$QuantidadeModulosPorInversor' in p.text:
+            p.text = p.text.replace('$QuantidadeModulosPorInversor', QuantidadeModulosPorInversor)
+        if '$PotenciaCCPorInversor' in p.text:
+            p.text = p.text.replace('$PotenciaCCPorInversor', PotenciaCCPorInversor)
+        if '$FabricanteInversor' in p.text:
+            p.text = p.text.replace('$FabricanteInversor', FabricanteInversor.get())
+        if '$TensaoAtendimento' in p.text:
+            p.text = p.text.replace('$TensaoAtendimento', TensaoAtendimento)
+        if '$Taps' in p.text:
+            p.text = p.text.replace('$Taps', Taps)
+        if '$PotenciaTransformador' in p.text:
+            p.text = p.text.replace('$PotenciaTransformador', PotenciaTransformador.get())
+        if '$TipoTransformador' in p.text:
+            p.text = p.text.replace('$TipoTransformador', TipoTransformador.get())
+        if '$TensaoSecundario' in p.text:
+            p.text = p.text.replace('$TensaoSecundario', TensaoSecundario.get())
+        if '$NumeroUc' in p.text:
+            p.text = p.text.replace('$NumeroUc', NumeroUc_final)
+        if '$ART' in p.text:
+            p.text = p.text.replace('$ART', ART.get())
+        if '$NivelIsolacao' in p.text:
+            p.text = p.text.replace('$NivelIsolacao', NivelIsolacao.get())
+        if '$CorrenteTransformador' in p.text:
+            p.text = p.text.replace('$CorrenteTransformador', CorrenteCalculadaTransformador)  
+        if '$CorrenteSaidaInversor' in p.text:
+            p.text = p.text.replace('$CorrenteSaidaInversor', CorrenteSaidaInversor.get())
+            
+        if QuantidadeTransformadores.get() != '1' and QuantidadeTransformadores.get() !='um':
+            if 'Será instalado $QuantidadeTransformadores' in p.text:
+                p.text = p.text.replace('Será instalado $QuantidadeTransformadores', 'Serão instalados ' + QuantidadeTransformadores.get())
+            if 'O transformador será instalado' in p.text:
+                p.text = p.text.replace('O transformador será instalado', 'Os transformadores serão instalados')
+            if 'O transformador será alimentado' in p.text:
+                p.text = p.text.replace('O transformador será alimentado', 'Os transformadores serão alimentados')
+            if 'ao transformador será instalado um painel de média' in p.text:
+                p.text = p.text.replace('ao transformador será instalado um painel de média', 'aos transformadores serão instalados painéis de média')
+        if '$PrevisaoEnergizacao' in p.text:
+            if len(PrevisaoEnergizacao.get()) != 0 :
+                p.text = p.text.replace('$PrevisaoEnergizacao', PrevisaoEnergizacao.get())
+            if len(PrevisaoEnergizacao.get()) == 0 :
+                p.text = p.text.replace('$PrevisaoEnergizacao', FinalEnergizacao)
+        if '$PotenciaTotalTransformadores' in p.text:
+                p.text = p.text.replace('$PotenciaTotalTransformadores', PotenciaTotalTransformadores)
+            
+        if '$Rele' in p.text:
+            p.text = p.text.replace('$Rele', Rele.get())
+        if '$FabricanteRele' in p.text:
+            p.text = p.text.replace('$FabricanteRele', FabricanteRele.get())
+            
+        if '$QuantidadeTransformadores' in p.text:
+            p.text = p.text.replace('$QuantidadeTransformadores', QuantidadeTransformadores.get())
+            
+    styles = document.styles
+    style = styles.add_style('titulo', WD_STYLE_TYPE.PARAGRAPH)
+    font = style.font
+    font.name = 'Arial'
+    font.size = Pt(18)
+    font.bold = True
+    font.color.rgb = RGBColor(19, 40,105)
+    paragraph = document.paragraphs[2]
+    paragraph.style = 'titulo'
+    paragraph = document.paragraphs[0]
+    paragraph.style = 'titulo'
+    paragraph = document.paragraphs[1]
+    paragraph.style = 'titulo'
+    
+    table = document.tables[0]
+    rowOne = table.rows[1]
+    cell = rowOne.cells[0] 
+    cell.text = ModeloInversor.get()
+
+    rowOne = table.rows[1]
+    cell = rowOne.cells[1] #quantidade Inversor
+    cell.text = QuantidadeInversor.get()
+
+    rowOne = table.rows[1]
+    cell = rowOne.cells[2] #potenciaInversor.000
+    cell.text = PotenciaInversor.get() + '.000'
+    rowOne = table.rows[1]
+    cell = rowOne.cells[3] #QuantidadeKwca
+    cell.text = QuantidadeKwca
+    rowOne = table.rows[1]
+    cell = rowOne.cells[5] #QuantidadeKwca
+    cell.text = QuantidadeKwca
+
+    rowOne = table.rows[4]
+    cell = rowOne.cells[5] #QCPotAparente
+    cell.text = QCPotAparente
+
+    rowOne = table.rows[4]
+    cell = rowOne.cells[3] #QCPotAtiva
+    cell.text = QCPotAtiva
+    
+    document.save(output + "\PRJ_" + NumProjeto.get() + "_MD_FV.docx")
+    
+
+#************************************ ANEXO C BASE ************************************   
+    
+    planilha = caminhoIcone.replace("\Python_ENEL_MD_SE_Base_16092022.docx", "\Python_ENEL_Anexo_C_Base_16092022.xlsx") 
+    wb = load_workbook(filename = planilha)
     sh = wb['Plan1']
 
+    
     for row in sh.iter_cols():
             for i in row:
-                b = str(i.value)
-                if '$NomeUsina' in b :
-                    b = b.replace('$NomeUsina' , NomeUsina.get())
-                    i.value = b
+                b = str(i.value)                
                 if '$TitularUc' in b :
                     b = b.replace('$TitularUc' , TitularUc.get())
                     i.value = b
                 if '$data' in b :
                     b = b.replace('$data' , dataAtual)
                     i.value = b
-                if '$ModeloTP1' in b :
-                    b = b.replace('$ModeloTP1' , String_ModeloTP1.get())
+                if '$RuaEnel' in b :
+                    b = b.replace('$RuaEnel' , RuaEnel.get() )
                     i.value = b
-                if '$FabricanteTP1' in b :
-                    b = b.replace('$FabricanteTP1' , String_FabricanteTP1.get())
+                if '$BairroEnel' in b :
+                    b = b.replace('$BairroEnel' , BairroEnel.get() )
                     i.value = b
-                if '$ModeloTP2' in b :
-                    b = b.replace('$ModeloTP2' , String_ModeloTP2.get())
+                if '$EmailTitular' in b :
+                    b = b.replace('$EmailTitular' ,EmailTitular.get() )
                     i.value = b
-                if '$FabricanteRele' in b :
-                    b = b.replace('$FabricanteRele' , FabricanteRele.get())
+                if '$TelefoneTitular' in b :
+                    b = b.replace('$TelefoneTitular' ,TelefoneTitular.get())
                     i.value = b
-                if '$Rele' in b :
-                    b = b.replace('$Rele' , Rele.get())
+                if '$NrEnel' in b :
+                    b = b.replace('$NrEnel' , NrEnel.get() )
                     i.value = b
-                if '$TipoTransformador' in b :
-                    b = b.replace('$TipoTransformador' , TipoTransformador.get())
+                if '$CidadeEnel' in b :
+                    b = b.replace('$CidadeEnel' , CidadeEnel.get())
+                    i.value = b  
+                if '$CepEnel' in b :
+                    b = b.replace('$CepEnel' , CepEnel.get())
+                    i.value = b 
+                if '$CNPJ' in b :
+                    b = b.replace('$CNPJ' , CNPJ.get())
+                    i.value = b 
+                if '$QuantidadeKwca' in b :
+                    b = b.replace('$QuantidadeKwca' , QuantidadeKwca)
+                    i.value = b
+                
+                if '$Impedancia' in b :
+                    b = b.replace('$Impedancia' , Impedancia.get())
                     i.value = b
                 if '$PotenciaTransformador' in b :
                     b = b.replace('$PotenciaTransformador' , PotenciaTransformador.get())
                     i.value = b
-                if '$TensaoSecundario' in b :
-                    b = b.replace('$TensaoSecundario' , TensaoSecundario.get())
+                
+                if '$RepresentanteLegalUm' in b :
+                    b = b.replace('$RepresentanteLegalUm' , RepresentanteLegalUm.get())
                     i.value = b
-                if '$DisjuntorGeral' in b :
-                    b = b.replace('$DisjuntorGeral' , DisjuntorGeral.get())
+                if '$EmailRepresentanteLegalUm' in b :
+                    b = b.replace('$EmailRepresentanteLegalUm' , EmailRepresentanteLegalUm.get())
                     i.value = b
-                if '$DisjuntorParcial' in b :
-                    b = b.replace('$DisjuntorParcial' , DisjuntorParcial.get())
+                if '$TelefoneCelularRepresentanteLegalUm' in b :
+                    b = b.replace('$TelefoneCelularRepresentanteLegalUm' , TelefoneCelularRepresentanteLegalUm.get())
                     i.value = b
-                if '$QtdDisjuntoresParciais' in b :
-                    b = b.replace('$QtdDisjuntoresParciais' , QtdDisjuntoresParciais.get())
+                
+                if '$CoordenadasGD' in b :
+                    b = b.replace('$CoordenadasGD' , LocalizacaoEnel.get())
                     i.value = b
-                if '$FabricanteTC' in b :
-                    b = b.replace('$FabricanteTC' , FabricanteTC.get())
-                    i.value = b  
-                if '$TC' in b :
-                    b = b.replace('$TC' , TC.get())
-                    i.value = b 
-
-    wb.save(output + "\PRJ_" + NumProjeto.get() + "_LISTA-MATERIAIS_36.2kV.xlsx")    
+                
+                
+                    
+    wb.save(output + "\PRJ_" + NumProjeto.get() + "_ANEXO_C.xlsx")    
         
          
     '''if pdf.get() == 1:
@@ -699,30 +726,288 @@ def imp():
         convert(output + "\PRJ_" + NumProjeto.get() + "_CAP.docx" , output + "\PRJ_" + NumProjeto.get() + "_CAP.pdf")
         convert(output + "\PRJ_" + NumProjeto.get() + "_ANEXOIV.docx" , output + "\PRJ_" + NumProjeto.get() + "_ANEXOIV.pdf")
         convert(output + "\PRJ_" + NumProjeto.get() + "_RCG.docx" , output + "\PRJ_" + NumProjeto.get() + "_RCG.pdf") '''
+
+#-----------------------------  EC -----------------------------
+    planilha2 = caminho.replace("\Python_ENEL_MD_SE_Base_16092022.docx", "\Python_ENEL_EC_Base_23092022.xlsx")
+    wb = load_workbook(filename = planilha2)
+    sh = wb['Planilha1']
+    imgListaMateriais = caminhoIcone.replace("\Python_ENEL_MD_SE_Base_16092022.docx", "\imgListaMateriais.png")       
+    img = drawing.image.Image(imgListaMateriais)
+    img2 = drawing.image.Image(imgListaMateriais)
+    img.height = 100
+    img.width = 150
+    img.anchor = 'A1'
+    sh.add_image(img)
+    img2.height = 100
+    img2.width = 150
+    img2.anchor = 'A56'
+    sh.add_image(img2)
+    if comercial.get() == 1:
+        
+        NomeContatoComercial.set(RepresentanteLegalUm.get())
+        CargoContatoComercial.set(CargoUm.get())
+        EmailContatoComercial.set(EmailRepresentanteLegalUm.get())
+        TelefoneContatoComercial.set(TelefoneCelularRepresentanteLegalUm.get())
+    for row in sh.iter_cols():
+            for i in row:
+                b = str(i.value)
+                if '$NomeUsina' in b :
+                    b = b.replace('$NomeUsina' , NomeUsina.get())
+                    i.value = b
+                if '$UfTitular' in b :
+                    b = b.replace('$UfTitular' , UfTitular.get())
+                    i.value = b
+                if '$CepTitular' in b :
+                    b = b.replace('$CepTitular' , CepTitular.get())
+                    i.value = b    
+                if '$TitularUc' in b :
+                    b = b.replace('$TitularUc' , TitularUc.get())
+                    i.value = b
+                if '$RuaTitular' in b :
+                    b = b.replace('$RuaTitular' , RuaTitular.get())
+                    i.value = b
+                if '$NrTitular' in b :
+                    b = b.replace('$NrTitular' , NrTitular.get())
+                    i.value = b
+                if '$BairroTitular' in b :
+                    b = b.replace('$BairroTitular' , BairroTitular.get())
+                    i.value = b
+                if '$CidadeTitular' in b :
+                    b = b.replace('$CidadeTitular' , CidadeTitular.get())
+                    i.value = b
+                if '$CidadeEnel' in b :
+                    b = b.replace('$CidadeEnel' , CidadeEnel.get())
+                    i.value = b
+                if '$NrEnel' in b :
+                    b = b.replace('$NrEnel' , NrEnel.get())
+                    i.value = b       
+                if '$CodigoCNAE' in b :
+                    b = b.replace('$CodigoCNAE' , CodigoCNAE.get())
+                    i.value = b
+                if '$DescricaoAtividade' in b :
+                    b = b.replace('$DescricaoAtividade' , TextBox)
+                    i.value = b
+                if '$RuaEnel' in b :
+                    b = b.replace('$RuaEnel' , RuaEnel.get())
+                    i.value = b                    
+                if '$BairroEnel' in b :
+                    b = b.replace('$BairroEnel' , BairroEnel.get())
+                    i.value = b                       
+                if '$CepEnel' in b :
+                    b = b.replace('$CepEnel' , CepEnel.get())
+                    i.value = b 
+                if '$TelefoneTitular' in b :
+                    b = b.replace('$TelefoneTitular' , TelefoneTitular.get())
+                    i.value = b 
+                if '$EmailTitular' in b :
+                    b = b.replace('$EmailTitular' , EmailTitular.get())
+                    i.value = b 
+                if '$InscricaoEstadual' in b :
+                    b = b.replace('$InscricaoEstadual' , InscricaoEstadual.get())
+                    i.value = b 
+                if '$CNPJ' in b :
+                    b = b.replace('$CNPJ' , CNPJ.get())
+                    i.value = b 
+                if '$data' in b :
+                    b = b.replace('$data' , dataAtual) 
+                    i.value = b 
+                
+                if '$RepresentanteLegalUm' in b :
+                    b = b.replace('$RepresentanteLegalUm' , RepresentanteLegalUm.get()) 
+                    i.value = b 
+                if '$CargoUm' in b :
+                    b = b.replace('$CargoUm' , CargoUm.get()) 
+                    i.value = b 
+                if '$RGRepresentanteLegalUm' in b :
+                    b = b.replace('$RGRepresentanteLegalUm' , RGRepresentanteLegalUm.get()) 
+                    i.value = b 
+                if '$OrgaoEmissorRGUm' in b :
+                    b = b.replace('$OrgaoEmissorRGUm' , OrgaoEmissorRGUm.get()) 
+                    i.value = b 
+                if '$CPFRepresentanteLegalUm' in b :
+                    b = b.replace('$CPFRepresentanteLegalUm' , CPFRepresentanteLegalUm.get()) 
+                    i.value = b 
+                if '$EmailRepresentanteLegalUm' in b :
+                    b = b.replace('$EmailRepresentanteLegalUm' , EmailRepresentanteLegalUm.get()) 
+                    i.value = b 
+                if '$EstadoCivilUm' in b :
+                    b = b.replace('$EstadoCivilUm' , EstadoCivilUm.get()) 
+                    i.value = b 
+                if '$NacionalidadeUm' in b :
+                    b = b.replace('$NacionalidadeUm' , NacionalidadeUM.get()) 
+                    i.value = b 
+                if '$ProfissaoUM' in b :
+                    b = b.replace('$ProfissaoUM' , ProfissaoUM.get()) 
+                    i.value = b
+                    
+                    
+                if '$RepresentanteLegalDois' in b :
+                    b = b.replace('$RepresentanteLegalDois' , RepresentanteLegalDois.get()) 
+                    i.value = b 
+                if '$CargoDois' in b :
+                    b = b.replace('$CargoDois' , CargoUm.get()) 
+                    i.value = b 
+                if '$RGRepresentanteLegalDois' in b :
+                    b = b.replace('$RGRepresentanteLegalDois' , RGRepresentanteLegalDois.get()) 
+                    i.value = b 
+                if '$OrgaoEmissorRGDois' in b :
+                    b = b.replace('$OrgaoEmissorRGDois' , OrgaoEmissorRGDois.get()) 
+                    i.value = b 
+                if '$CPFRepresentanteLegalDois' in b :
+                    b = b.replace('$CPFRepresentanteLegalDois' , CPFRepresentanteLegalDois.get()) 
+                    i.value = b 
+                if '$EmailRepresentanteLegalDois' in b :
+                    b = b.replace('$EmailRepresentanteLegalDois' , EmailRepresentanteLegalDois.get()) 
+                    i.value = b 
+                if '$EstadoCivilDois' in b :
+                    b = b.replace('$EstadoCivilDois' , EstadoCivilDois.get()) 
+                    i.value = b 
+                if '$NacionalidadeDois' in b :
+                    b = b.replace('$NacionalidadeDois' , NacionalidadeDois.get()) 
+                    i.value = b 
+                if '$ProfissaoDois' in b :
+                    b = b.replace('$ProfissaoDois' , ProfissaoDois.get()) 
+                    i.value = b
+                if '$QuantidadeKwca' in b :
+                    b = b.replace('$QuantidadeKwca' , QuantidadeKwca) 
+                    i.value = b
+                if '$NomeContatoComercial' in b :
+                    b = b.replace('$NomeContatoComercial' , NomeContatoComercial.get()) 
+                    i.value = b
+                if '$CargoContatoComercial' in b :
+                    b = b.replace('$CargoContatoComercial' , CargoContatoComercial.get()) 
+                    i.value = b
+                if '$TelefoneContatoComercial' in b :
+                    b = b.replace('$TelefoneContatoComercial' , TelefoneContatoComercial.get()) 
+                    i.value = b
+                if '$EmailContatoComercial' in b :
+                    b = b.replace('$EmailContatoComercial' , EmailContatoComercial.get()) 
+                    i.value = b
+                if '$RuaContatoComercial' in b :
+                    b = b.replace('$RuaContatoComercial' , RuaContatoComercial.get()) 
+                    i.value = b
+                if '$NrContatoComercial' in b :
+                    b = b.replace('$NrContatoComercial' , NrContatoComercial.get()) 
+                    i.value = b
+                if '$BairroContatoComercial' in b :
+                    b = b.replace('$BairroContatoComercial' , BairroContatoComercial.get()) 
+                    i.value = b
+                if '$CepContatoComercial' in b :
+                    b = b.replace('$CepContatoComercial' , CepContatoComercial.get()) 
+                    i.value = b
+                if '$CidadeContatoComercial' in b :
+                    b = b.replace('$CidadeContatoComercial' , CidadeContatoComercial.get()) 
+                    i.value = b
+
+    wb.save(output + "\PRJ_" + NumProjeto.get() + "_EC.xlsx")
+    
+#************************************ PREENCHENDO RCG*****************************************************     
+    caminho5 = caminho.replace("\Python_ENEL_MD_SE_Base_16092022.docx", "\Python_ENEL_RCG_Base_20092022.docx") 
+    document = Document(caminho5)
+    for table in document.tables:
+                    for row in table.rows:
+                        for cell in row.cells:
+                            cell.text = cell.text.replace('$TitularUc', TitularUc.get())
+                            cell.text = cell.text.replace('$CNPJ', CNPJ.get())
+                            cell.text = cell.text.replace('$RuaTitular', RuaTitular.get())
+                            cell.text = cell.text.replace('$NrTitular', NrTitular.get())
+                            cell.text = cell.text.replace('$BairroTitular', BairroTitular.get())
+                            cell.text = cell.text.replace('$CepTitular', CepTitular.get())
+                            cell.text = cell.text.replace('$TelefoneTitular', TelefoneTitular.get())
+                            cell.text = cell.text.replace('$CidadeTitular', CidadeTitular.get())
+                            cell.text = cell.text.replace('$EmailTitular', EmailTitular.get())
+                            cell.text = cell.text.replace('$UfTitular', UfTitular.get())
+                            
+                            cell.text = cell.text.replace('$RuaEnel', RuaEnel.get())
+                            cell.text = cell.text.replace('$NomeUsina', NomeUsina.get())
+                            cell.text = cell.text.replace('$NrEnel', NrEnel.get())
+                            cell.text = cell.text.replace('$BairroEnel', BairroEnel.get())
+                            cell.text = cell.text.replace('$CepEnel', CepEnel.get())
+                            cell.text = cell.text.replace('$CidadeEnel', CidadeEnel.get())
+                            cell.text = cell.text.replace('$CepEnel', CepEnel.get())
+                            cell.text = cell.text.replace('$Latitude', Latitude)
+                            cell.text = cell.text.replace('$Longitude', Longitude)
+                            
+                            cell.text = cell.text.replace('$QuantidadeKwp', QuantidadeKwp)
+                            cell.text = cell.text.replace('$AreaTotal', AreaTotal)
+                            cell.text = cell.text.replace('$QuantidadeInversor', QuantidadeInversor.get())
+                            cell.text = cell.text.replace('$QuantidadeTotalModulos', QuantidadeTotalModulos.get())
+                            cell.text = cell.text.replace('$QuantidadeModulosPorInversor', QuantidadeModulosPorInversor)
+                            cell.text = cell.text.replace('$AreaArranjo', AreaArranjo)
+                            cell.text = cell.text.replace('$PotPicoArranjo', PotPicoArranjo)
+                            cell.text = cell.text.replace('$data', dataAtual) 
+                            paragraphs = cell.paragraphs
+                            for paragraph in paragraphs:
+                                for run in paragraph.runs:
+                                        font = run.font
+                                        font.size= Pt(9)
+    for p in document.paragraphs:
+        if '$CidadeEnel' in p.text:
+            p.text = p.text.replace('$CidadeEnel', CidadeEnel.get())
+        if '$NumProjeto' in p.text:
+            p.text = p.text.replace('$NumProjeto', NumProjeto.get())
+            
+    document.save(output + "\PRJ_" + NumProjeto.get() + "_RCG.docx")
+#************************************ PREENCHENDO FOE*****************************************************         
+    planilha3 = caminho.replace("\Python_ENEL_MD_SE_Base_16092022.docx", "\Python_ENEL_FOE_TESTE_23092022.xlsx") 
+    wb = load_workbook(filename = planilha3)
+    sh = wb['Planilha1']     
+    for row in sh.iter_cols():
+                for i in row:
+                    b = str(i.value)
+                    if '$RuaEnel' in b :
+                        b = b.replace('$RuaEnel' , RuaEnel.get() )
+                        i.value = b
+                    if '$TitularUc' in b :
+                        b = b.replace('$TitularUc' , TitularUc.get() )
+                        i.value = b
+                    if '$BairroEnel' in b :
+                        b = b.replace('$BairroEnel' , BairroEnel.get() )
+                        i.value = b
+                    if '$EmailTitular' in b :
+                        b = b.replace('$EmailTitular' , EmailTitular.get() )
+                        i.value = b
+                    if '$CidadeEnel' in b :
+                        b = b.replace('$CidadeEnel' , CidadeEnel.get() )
+                        i.value = b
+                    if '$TelefoneTitular' in b :
+                        b = b.replace('$TelefoneTitular' , TelefoneTitular.get() )
+                        i.value = b
+                    if '$CNPJ' in b :
+                        b = b.replace('$CNPJ' , CNPJ.get() )
+                        i.value = b
+                    if '$NrEnel' in b :
+                        b = b.replace('$NrEnel' , NrEnel.get() )
+                        i.value = b
+                    if '$CepEnel' in b :
+                        b = b.replace('$CepEnel' , CepEnel.get() )
+                        i.value = b
+
+    wb.save(output + "\PRJ_" + NumProjeto.get() + "_ATENCAO.xlsx")    
+    
+    
+    
+    
+    
+    
+    
     messagebox.showinfo(message="Executado com sucesso!")  
      
     
     
-
 def Escolher_saida():
     global output
     output =filedialog.askdirectory()
     return output
 
 def EnderecoDinamicoUsina(event):
-    global address
-    
+    global address 
     try:
-
         address = get_address_from_cep(CepEnel.get(), webservice=WebService.VIACEP)
         CidadeEnel.delete('0', 'end')
         CidadeEnel.insert(0,address['cidade'])
-
-
         RuaEnel.delete('0', 'end')
         RuaEnel.insert(0,address['logradouro'])
-
-
         BairroEnel.delete('0', 'end')
         BairroEnel.insert(0,address['bairro'])
 
@@ -746,7 +1031,7 @@ def EnderecoDinamicoUsina(event):
     
     
 def EnderecoDinamicoTitular(event):
-    global address
+    global addressTitular
     
     try:
 
@@ -783,7 +1068,24 @@ def EnderecoDinamicoTitular(event):
     except exceptions.BaseException as e:
         messagebox.showinfo(message="CEP não encontrado 😕")
 
+def EnderecoDinamicoComercial(event):
+    global addressComercial
+    
+    try:
 
+        addressComercial = get_address_from_cep(CepContatoComercial.get(), webservice=WebService.VIACEP)
+        CidadeContatoComerciall_.delete('0', 'end')
+        CidadeContatoComerciall_.insert(0,addressComercial['cidade'])
+        
+        BairroContatoComerciall_.delete('0', 'end')
+        BairroContatoComerciall_.insert(0,addressComercial['bairro'])
+        
+        RuaContatoComerciall_.delete('0', 'end')
+        RuaContatoComerciall_.insert(0,addressComercial['logradouro'])
+
+
+    except exceptions.InvalidCEP as eic:
+        messagebox.showinfo(message="CEP inválido.")
 
 
 
@@ -815,7 +1117,8 @@ TensaoSecundario = tk.StringVar() #feito
 NumeroUc = tk.StringVar()
 Taps = tk.StringVar() 
 Uc = tk.IntVar() 
-pdf = tk.IntVar() 
+pdf = tk.IntVar()
+comercial = tk.IntVar() 
 AlturaModulo =tk.StringVar()
 LarguraModulo = tk.StringVar()
 
@@ -839,9 +1142,10 @@ FabricanteTC = tk.StringVar()#feito
 NivelIsolacao = tk.StringVar() #feito
 CorrenteSaidaInversor = tk.StringVar()#feito  
 QuantidadeTransformadores = tk.StringVar() #feito  
-PotenciaTotalTransformadores = tk.StringVar()    
+PotenciaTotalTransformadores = tk.StringVar()   
 
 Impedancia = tk.StringVar() #feito 
+
 
 #INSERINDO DADOS PARA A CONSTRUÇÃO DO CUSD -----------------------------------------------------------------------
 #Definindo variáveis
@@ -856,7 +1160,11 @@ CPFRepresentanteLegalUm = tk.StringVar() #feito
 RGRepresentanteLegalUm = tk.StringVar() #feito 
 OrgaoEmissorRGUm = tk.StringVar() #feito 
 CargoUm = tk.StringVar() #feito 
-CotaUm = tk.StringVar() #feito 
+ProfissaoUM = tk.StringVar() #feito
+
+NacionalidadeUm = tk.StringVar() 
+EstadoCivilUm = tk.StringVar()
+
 TelefoneCelularRepresentanteLegalUm = tk.StringVar() #feito 
 EmailRepresentanteLegalUm = tk.StringVar() #feito 
 
@@ -865,7 +1173,11 @@ CPFRepresentanteLegalDois = tk.StringVar() #feito
 RGRepresentanteLegalDois = tk.StringVar() #feito 
 OrgaoEmissorRGDois = tk.StringVar() #feito 
 CargoDois = tk.StringVar() #feito 
-CotaDois = tk.StringVar() #feito 
+ProfissaoDois = tk.StringVar() #feito 
+
+
+
+
 TelefoneCelularRepresentanteLegalDois = tk.StringVar() #feito 
 EmailRepresentanteLegalDois = tk.StringVar() #feito 
 #INSERINDO DADOS PARA A CONSTRUÇÃO DO CAP -----------------------------------------------------------------------
@@ -879,10 +1191,21 @@ String_FabricanteTP1 = tk.StringVar()#feito
 String_ModeloTP2 = tk.StringVar()#feito
 
 
+NacionalidadeUM = tk.StringVar()
+EstadoCivilUm = tk.StringVar()
+NacionalidadeDois = tk.StringVar() 
+EstadoCivilDois = tk.StringVar()
 
 
-
-
+CargoContatoComercial = tk.StringVar()
+CidadeContatoComercial = tk.StringVar()
+NrContatoComercial = tk.StringVar()
+RuaContatoComercial = tk.StringVar()
+NomeContatoComercial = tk.StringVar()
+CepContatoComercial = tk.StringVar()
+BairroContatoComercial = tk.StringVar()
+EmailContatoComercial = tk.StringVar()
+TelefoneContatoComercial = tk.StringVar()
 
 menubar = Menu(root)
 filemenu = Menu(menubar, tearoff=0)
@@ -908,7 +1231,9 @@ myLabel.grid(row=36,column=1, sticky='w')
 #Inserindo Marcador
 myLabel=Label(second_frame,text=" Representante Legal 2 📝 ", font=('Arial', 13,'bold'),pady=20, fg = 'red' , bg='white')
 myLabel.grid(row=36,column=3, sticky='sw')
-
+#Inserindo Marcador
+myLabel=Label(second_frame,text=" Contato Comercial 🏢 ", font=('Arial', 13,'bold'),pady=20, fg = '#8E5353' , bg='white')
+myLabel.grid(row=47,column=1, sticky='sw')
 #Inserindo Marcador
 myLabel=Label(second_frame,pady=10, bg='white')
 myLabel.grid(row=0,column=1)
@@ -1335,7 +1660,6 @@ EmailTitular_entry = tk.Label(second_frame,
 EmailTitular = tk.Entry(second_frame, textvariable =  EmailTitular ,width = 30,font=('Arial 10'),borderwidth=5)
 EmailTitular.grid(row=28, column=1,sticky='w')
 
-
 #------------------------------------- InscricaoMunicipal
 InscricaoMunicipal_entry = tk.Label(second_frame, 
          text="Inscrição Municipal :",font=('Arial', 10,'bold'),pady=5,padx=10,fg="black", bg="white",
@@ -1410,12 +1734,12 @@ CargoUm_entry = tk.Label(second_frame,
 CargoUm = tk.Entry(second_frame, textvariable = CargoUm ,width = 20,font=('Arial 10'),borderwidth=5)
 CargoUm.grid(row=41, column=1,sticky='w')
 
-#-----------------------------------CotaUm
-CotaUm = tk.Label(second_frame, 
-         text="Cota :",font=('Arial', 10,'bold'),pady=5,padx=10,fg="black", bg="white",
+#-----------------------------------ProfissaoUM
+ProfissaoUM = tk.Label(second_frame, 
+         text="Profissão :",font=('Arial', 10,'bold'),pady=5,padx=10,fg="black", bg="white",
                 borderwidth=0).grid(row=42,column =0,sticky='e')
-CotaUm = tk.Entry(second_frame, textvariable = CotaUm ,width = 20,font=('Arial 10'),borderwidth=5)
-CotaUm.grid(row=42, column=1,sticky='w')
+ProfissaoUM = tk.Entry(second_frame, textvariable = ProfissaoUM ,width = 20,font=('Arial 10'),borderwidth=5)
+ProfissaoUM.grid(row=42, column=1,sticky='w')
 
 
 #-----------------------------------TelefoneCelularRepresentanteLegalUm
@@ -1431,7 +1755,18 @@ EmailRepresentanteLegalUm = tk.Label(second_frame,
                 borderwidth=0).grid(row=44,column =0,sticky='e')
 EmailRepresentanteLegalUm = tk.Entry(second_frame, textvariable = EmailRepresentanteLegalUm ,width = 20,font=('Arial 10'),borderwidth=5)
 EmailRepresentanteLegalUm.grid(row=44, column=1,sticky='w')
-
+#-----------------------------------Nacionalidade
+NacionalidadeUM = tk.Label(second_frame, 
+         text="Nacionalidade :",font=('Arial', 10,'bold'),pady=5,padx=10,fg="black", bg="white",
+                borderwidth=0).grid(row=45,column =0,sticky='e')
+NacionalidadeUM = tk.Entry(second_frame, textvariable = NacionalidadeUM ,width = 20,font=('Arial 10'),borderwidth=5)
+NacionalidadeUM.grid(row=45, column=1,sticky='w')
+#-----------------------------------EstadoCivilUm
+EstadoCivilUm = tk.Label(second_frame, 
+         text="Estado Civil :",font=('Arial', 10,'bold'),pady=5,padx=10,fg="black", bg="white",
+                borderwidth=0).grid(row=46,column =0,sticky='e')
+EstadoCivilUm = tk.Entry(second_frame, textvariable = EstadoCivilUm ,width = 20,font=('Arial 10'),borderwidth=5)
+EstadoCivilUm.grid(row=46, column=1,sticky='w')
 #----------------------------------------  Representante legal 2   ---------------------------------
 
 #-----------------------------------RepresentanteLegalDois
@@ -1448,14 +1783,12 @@ CPFRepresentanteLegalDois_entry = tk.Label(second_frame,
 CPFRepresentanteLegalDois = tk.Entry(second_frame, textvariable = CPFRepresentanteLegalDois ,width = 20,font=('Arial 10'),borderwidth=5)
 CPFRepresentanteLegalDois.grid(row=38, column=3,sticky='w')
 
-
 #-----------------------------------RGRepresentanteLegalDois
 RGRepresentanteLegalDois_entry = tk.Label(second_frame, 
          text="RG :",font=('Arial', 10,'bold'),pady=5,padx=10,fg="black", bg="white",
                 borderwidth=0).grid(row=39,column =2,sticky='e')
 RGRepresentanteLegalDois = tk.Entry(second_frame, textvariable = RGRepresentanteLegalDois ,width = 20,font=('Arial 10'),borderwidth=5)
 RGRepresentanteLegalDois.grid(row=39, column=3,sticky='w')
-
 
 #-----------------------------------OrgaoEmissorRGDois
 OrgaoEmissorRGDois_entry = tk.Label(second_frame, 
@@ -1471,13 +1804,12 @@ CargoDois_entry = tk.Label(second_frame,
 CargoDois = tk.Entry(second_frame, textvariable = CargoDois ,width = 20,font=('Arial 10'),borderwidth=5)
 CargoDois.grid(row=41, column=3,sticky='w')
 
-#-----------------------------------CotaDois
-CotaDois = tk.Label(second_frame, 
-         text="Cota :",font=('Arial', 10,'bold'),pady=5,padx=10,fg="black", bg="white",
+#-----------------------------------ProfissaoDois
+ProfissaoDois = tk.Label(second_frame, 
+         text="Profissão :",font=('Arial', 10,'bold'),pady=5,padx=10,fg="black", bg="white",
                 borderwidth=0).grid(row=42,column =2,sticky='e')
-CotaDois = tk.Entry(second_frame, textvariable = CotaDois ,width = 20,font=('Arial 10'),borderwidth=5)
-CotaDois.grid(row=42, column=3,sticky='w')
-
+ProfissaoDois = tk.Entry(second_frame, textvariable = ProfissaoDois ,width = 20,font=('Arial 10'),borderwidth=5)
+ProfissaoDois.grid(row=42, column=3,sticky='w')
 
 #-----------------------------------TelefoneCelularRepresentanteLegalDois
 TelefoneCelularRepresentanteLegalDois_entry = tk.Label(second_frame, 
@@ -1492,14 +1824,106 @@ EmailRepresentanteLegalDois = tk.Label(second_frame,
                 borderwidth=0).grid(row=44,column =2,sticky='e')
 EmailRepresentanteLegalDois = tk.Entry(second_frame, textvariable = EmailRepresentanteLegalDois ,width = 20,font=('Arial 10'),borderwidth=5)
 EmailRepresentanteLegalDois.grid(row=44, column=3,sticky='w')
-
+#-----------------------------------NacionalidadeDois
+NacionalidadeDois = tk.Label(second_frame, 
+         text="Nacionalidade :",font=('Arial', 10,'bold'),pady=5,padx=10,fg="black", bg="white",
+                borderwidth=0).grid(row=45,column =2,sticky='e')
+NacionalidadeDois = tk.Entry(second_frame, textvariable = NacionalidadeDois ,width = 20,font=('Arial 10'),borderwidth=5)
+NacionalidadeDois.grid(row=45, column=3,sticky='w')
+#-----------------------------------EstadoCivilDois
+EstadoCivilDois = tk.Label(second_frame, 
+         text="Estado Civil :",font=('Arial', 10,'bold'),pady=5,padx=10,fg="black", bg="white",
+                borderwidth=0).grid(row=46,column =2,sticky='e')
+EstadoCivilDois = tk.Entry(second_frame, textvariable = EstadoCivilDois ,width = 20,font=('Arial 10'),borderwidth=5)
+EstadoCivilDois.grid(row=46, column=3,sticky='w')
 
 pdf.set(-1)
 
 PDF = Radiobutton(second_frame, text="Gerar PDF's além de arquivos .doc", variable=pdf, value=1,pady=20,fg="black", bg="white")                 
-PDF.grid(row=45, column=3,sticky='e')
+PDF.grid(row=60, column=3,sticky='e')
+#----------------------------------------  Contato comecial   ---------------------------------
+
+#-----------------------------------NomeContatoComercial
+NomeContatoComercial_ = tk.Label(second_frame, 
+         text="Nome Completo :",font=('Arial', 10,'bold'),pady=5,padx=10,fg="black", bg="white",
+                borderwidth=0).grid(row=48,column =0,sticky='e')
+NomeContatoComerciall_  = tk.Entry(second_frame, textvariable = NomeContatoComercial ,width = 20,font=('Arial 10'),borderwidth=5)
+NomeContatoComerciall_.grid(row=48, column=1,sticky='w')
+
+#-----------------------------------CargoContatoComercial
+CargoContatoComercial_ = tk.Label(second_frame, 
+         text="Cargo :",font=('Arial', 10,'bold'),pady=5,padx=10,fg="black", bg="white",
+                borderwidth=0).grid(row=49,column =0,sticky='e')
+CargoContatoComerciall_  = tk.Entry(second_frame, textvariable = CargoContatoComercial ,width = 20,font=('Arial 10'),borderwidth=5)
+CargoContatoComerciall_.grid(row=49, column=1,sticky='w')
 
 
+#-----------------------------------EmailContatoComercial
+EmailContatoComercial_ = tk.Label(second_frame, 
+         text="Email :",font=('Arial', 10,'bold'),pady=5,padx=10,fg="black", bg="white",
+                borderwidth=0).grid(row=50,column =0,sticky='e')
+EmailContatoComerciall_  = tk.Entry(second_frame, textvariable = EmailContatoComercial ,width = 20,font=('Arial 10'),borderwidth=5)
+EmailContatoComerciall_.grid(row=50, column=1,sticky='w')
+
+#-----------------------------------TelefoneContatoComercial
+TelefoneContatoComercial_ = tk.Label(second_frame, 
+         text="Telefone :",font=('Arial', 10,'bold'),pady=5,padx=10,fg="black", bg="white",
+                borderwidth=0).grid(row=51,column =0,sticky='e')
+TelefoneContatoComerciall_  = tk.Entry(second_frame, textvariable = TelefoneContatoComercial ,width = 20,font=('Arial 10'),borderwidth=5)
+TelefoneContatoComerciall_.grid(row=51, column=1,sticky='w')
+#-----------------------------------CepContatoComercial
+CepContatoComercial_ = tk.Label(second_frame, 
+         text="CEP :",font=('Arial', 10,'bold'),pady=5,padx=10,fg="black", bg="white",
+                borderwidth=0).grid(row=52,column =0,sticky='e')
+CepContatoComerciall_  = tk.Entry(second_frame, textvariable = CepContatoComercial ,width = 20,font=('Arial 10'),borderwidth=5)
+CepContatoComerciall_.bind("<FocusOut>",EnderecoDinamicoComercial)
+CepContatoComerciall_.grid(row=52, column=1,sticky='w')
+
+#-----------------------------------NrContatoComercial
+NrContatoComercial_ = tk.Label(second_frame, 
+         text="Nº :",font=('Arial', 10,'bold'),pady=5,padx=10,fg="black", bg="white",
+                borderwidth=0).grid(row=53,column =0,sticky='e')
+NrContatoComerciall_  = tk.Entry(second_frame, textvariable = NrContatoComercial ,width = 20,font=('Arial 10'),borderwidth=5)
+NrContatoComerciall_.grid(row=53, column=1,sticky='w')
+
+
+#-----------------------------------CidadeContatoComercial
+CidadeContatoComercial_ = tk.Label(second_frame, 
+         text="Cidade :",font=('Arial', 10,'bold'),pady=5,padx=10,fg="black", bg="white",
+                borderwidth=0).grid(row=54,column =0,sticky='e')
+CidadeContatoComerciall_  = tk.Entry(second_frame, textvariable = CidadeContatoComercial ,width = 20,font=('Arial 10'),borderwidth=5)
+CidadeContatoComerciall_.grid(row=54, column=1,sticky='w')
+
+#-----------------------------------RuaContatoComercial
+RuaContatoComercial_ = tk.Label(second_frame, 
+         text="Rua :",font=('Arial', 10,'bold'),pady=5,padx=10,fg="black", bg="white",
+                borderwidth=0).grid(row=55,column =0,sticky='e')
+RuaContatoComerciall_  = tk.Entry(second_frame, textvariable = RuaContatoComercial ,width = 20,font=('Arial 10'),borderwidth=5)
+RuaContatoComerciall_.grid(row=55, column=1,sticky='w')
+
+#-----------------------------------BairroContatoComercial
+BairroContatoComercial_ = tk.Label(second_frame, 
+         text="Bairro :",font=('Arial', 10,'bold'),pady=5,padx=10,fg="black", bg="white",
+                borderwidth=0).grid(row=56,column =0,sticky='e')
+BairroContatoComerciall_  = tk.Entry(second_frame, textvariable = BairroContatoComercial ,width = 20,font=('Arial 10'),borderwidth=5)
+BairroContatoComerciall_.grid(row=56, column=1,sticky='w')
+
+
+
+
+comercial.set(-1)
+
+PDF = Radiobutton(second_frame, text="Utilizar mesmos dados do RL1", variable=comercial, value=1,fg="black", bg="white")                 
+PDF.grid(row=57, column=1,sticky='w')
+
+CepContatoComercial_ = tk.Label(second_frame, 
+         text="(Nome, cargo ,email e telefone)",font=('Arial', 10),fg="black", bg="white",
+                borderwidth=0).grid(row=58,column =1,sticky='w')
+
+
+
+
+#----------------------------------------  Rodapé   ---------------------------------
 image = Image.open(caminhoIcone.replace("\Python_ENEL_MD_SE_Base_16092022.docx", "\imgLight.jpeg"))
 resize_image = image.resize((70, 30))
 img = ImageTk.PhotoImage(resize_image)
@@ -1513,6 +1937,25 @@ myLabel=Label(root,text="Developed by Yuri Mello",
 
 root.config(menu=menubar)
 root.mainloop()
+
+
+
+
+# In[1]:
+
+
+from IPython.display import display, HTML
+display(HTML("<style>.container { width:100% !important; }</style>"))
+
+
+# In[33]:
+
+
+#************************************ PREENCHENDO FOE*****************************************************     
+
+
+# In[ ]:
+
 
 
 
