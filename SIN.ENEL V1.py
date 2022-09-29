@@ -1,11 +1,11 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[ ]:
+# In[37]:
+
 
 
 from docx2pdf import convert
-import pyproj
 import pickle
 import locale
 from openpyxl import drawing
@@ -204,6 +204,9 @@ def imp():
         
     if len(BairroEnel.get())==0:
         BairroEnel.set(address['bairro'])
+    
+    if len(UfEnel.get())==0:
+        UfEnel.set(address['uf'])
         
         
     if len(CidadeTitular.get())==0:
@@ -731,7 +734,7 @@ def imp():
     planilha2 = caminho.replace("\Python_ENEL_MD_SE_Base_16092022.docx", "\Python_ENEL_EC_Base_23092022.xlsx")
     wb = load_workbook(filename = planilha2)
     sh = wb['Planilha1']
-    imgListaMateriais = caminhoIcone.replace("\Python_ENEL_MD_SE_Base_16092022.docx", "\imgListaMateriais.png")       
+    '''imgListaMateriais = caminhoIcone.replace("\Python_ENEL_MD_SE_Base_16092022.docx", "\imgListaMateriais.png")       
     img = drawing.image.Image(imgListaMateriais)
     img2 = drawing.image.Image(imgListaMateriais)
     img.height = 100
@@ -741,7 +744,7 @@ def imp():
     img2.height = 100
     img2.width = 150
     img2.anchor = 'A56'
-    sh.add_image(img2)
+    sh.add_image(img2)'''
     if comercial.get() == 1:
         
         NomeContatoComercial.set(RepresentanteLegalUm.get())
@@ -927,6 +930,7 @@ def imp():
                             cell.text = cell.text.replace('$CepEnel', CepEnel.get())
                             cell.text = cell.text.replace('$Latitude', Latitude)
                             cell.text = cell.text.replace('$Longitude', Longitude)
+                            cell.text = cell.text.replace('$UfEnel', UfEnel.get())
                             
                             cell.text = cell.text.replace('$QuantidadeKwp', QuantidadeKwp)
                             cell.text = cell.text.replace('$AreaTotal', AreaTotal)
@@ -955,11 +959,11 @@ def imp():
     for row in sh.iter_cols():
                 for i in row:
                     b = str(i.value)
-                    if '$RuaEnel' in b :
-                        b = b.replace('$RuaEnel' , RuaEnel.get() )
-                        i.value = b
                     if '$TitularUc' in b :
                         b = b.replace('$TitularUc' , TitularUc.get() )
+                        i.value = b
+                    if '$RuaEnel' in b :
+                        b = b.replace('$RuaEnel' , RuaEnel.get() )
                         i.value = b
                     if '$BairroEnel' in b :
                         b = b.replace('$BairroEnel' , BairroEnel.get() )
@@ -982,7 +986,35 @@ def imp():
                     if '$CepEnel' in b :
                         b = b.replace('$CepEnel' , CepEnel.get() )
                         i.value = b
-
+                    
+                    if '$QuantidadeKwca' in b :
+                        b = b.replace('$QuantidadeKwca' , QuantidadeKwca)
+                        i.value = b
+                    if '$Latitude' in b :
+                        b = b.replace('$Latitude' , Latitude)
+                        i.value = b
+                    if '$Longitude' in b :
+                        b = b.replace('$Longitude' , Longitude)
+                        i.value = b
+                    if '$PotenciaTransformador' in b :
+                        b = b.replace('$PotenciaTransformador' , PotenciaTransformador.get())
+                        i.value = b
+                    if '$kWcaPorFatordePotencia' in b :
+                        b = b.replace('$kWcaPorFatordePotencia' ,str(float(QuantidadeKwca)/0.92))
+                        i.value = b                 
+                    if '$Impedancia' in b :
+                        b = b.replace('$Impedancia' , Impedancia.get())
+                        i.value = b
+                    if '$PrevisaoEnergizacao' in p.text:
+                        if len(PrevisaoEnergizacao.get()) != 0 :
+                            p.text = p.text.replace('$PrevisaoEnergizacao', PrevisaoEnergizacao.get())
+                        if len(PrevisaoEnergizacao.get()) == 0 :
+                            p.text = p.text.replace('$PrevisaoEnergizacao', FinalEnergizacao)
+                    if '$data' in b :
+                        b = b.replace('$data' , dataAtual)
+                        i.value = b  
+                        
+                        
     wb.save(output + "\PRJ_" + NumProjeto.get() + "_ATENCAO.xlsx")    
     
     
@@ -1010,7 +1042,9 @@ def EnderecoDinamicoUsina(event):
         RuaEnel.insert(0,address['logradouro'])
         BairroEnel.delete('0', 'end')
         BairroEnel.insert(0,address['bairro'])
-
+        UfEnel.delete('0', 'end')
+        UfEnel.insert(0,address['uf'])
+        
     except exceptions.InvalidCEP as eic:
         messagebox.showinfo(message="CEP inválido.")
 
@@ -1206,6 +1240,7 @@ CepContatoComercial = tk.StringVar()
 BairroContatoComercial = tk.StringVar()
 EmailContatoComercial = tk.StringVar()
 TelefoneContatoComercial = tk.StringVar()
+UfEnel = tk.StringVar()
 
 menubar = Menu(root)
 filemenu = Menu(menubar, tearoff=0)
@@ -1224,7 +1259,7 @@ myLabel=Label(second_frame,text="Localização da Usina 🏳️ ", pady = 20,fon
 myLabel.grid(row=10,column=1, sticky='w')
 #Inserindo Marcador
 myLabel=Label(second_frame,text="Dados do Titular 👤 ", pady = 20,font=('Arial', 13,'bold'), fg = 'purple' , bg='white')
-myLabel.grid(row=18,column=1, sticky='w')
+myLabel.grid(row=19,column=1, sticky='w')
 #Inserindo Marcador
 myLabel=Label(second_frame,text=" Representante Legal 1 📝 ", font=('Arial', 13,'bold'),pady=20, fg = 'red' , bg='white')
 myLabel.grid(row=36,column=1, sticky='w')
@@ -1302,14 +1337,14 @@ CidadeEnel = tk.Entry(second_frame, textvariable =  CidadeEnel ,width = 30,font=
 CidadeEnel.bind("<FocusIn>", lambda args: CidadeEnel.delete('0', 'end'))
 CidadeEnel.grid(row=12, column=1,sticky='w') 
 
-#------------------------------------- Número
-NrEnel_entry = tk.Label(second_frame, 
-         text="N° :",font=('Arial', 10,'bold'),pady=5,padx=10,fg="black", bg="white",
+
+#------------------------------------- CEP
+CepEnel_entry = tk.Label(second_frame, 
+         text="CEP :",font=('Arial', 10,'bold'),pady=5,padx=10,fg="black", bg="white",
                 borderwidth=0).grid(row=13,sticky='e')
-NrEnel = tk.Entry(second_frame, textvariable =  NrEnel ,width = 10,font=('Arial 10'),borderwidth=5)
-
-NrEnel.grid(row=13, column=1,sticky='w')
-
+CepEnel = tk.Entry(second_frame, textvariable =  CepEnel ,width = 18,font=('Arial 10'),borderwidth=5)
+CepEnel.bind("<FocusOut>",EnderecoDinamicoUsina)
+CepEnel.grid(row=13, column=1,sticky='w')
 #------------------------------------- Bairro
 BairroEnel_entry = tk.Label(second_frame, 
          text="Bairro :",font=('Arial', 10,'bold'),pady=5,padx=10,fg="black", bg="white",
@@ -1317,27 +1352,38 @@ BairroEnel_entry = tk.Label(second_frame,
 BairroEnel = tk.Entry(second_frame, textvariable =  BairroEnel ,width = 30,font=('Arial 10'),borderwidth=5)
 BairroEnel.bind("<FocusIn>", lambda args: BairroEnel.delete('0', 'end'))
 BairroEnel.grid(row=14, column=1,sticky='w')
-#------------------------------------- CEP
-CepEnel_entry = tk.Label(second_frame, 
-         text="CEP :",font=('Arial', 10,'bold'),pady=5,padx=10,fg="black", bg="white",
+
+
+#------------------------------------- Número
+NrEnel_entry = tk.Label(second_frame, 
+         text="N° :",font=('Arial', 10,'bold'),pady=5,padx=10,fg="black", bg="white",
                 borderwidth=0).grid(row=15,sticky='e')
-CepEnel = tk.Entry(second_frame, textvariable =  CepEnel ,width = 18,font=('Arial 10'),borderwidth=5)
-CepEnel.bind("<FocusOut>",EnderecoDinamicoUsina)
-CepEnel.grid(row=15, column=1,sticky='w')
+NrEnel = tk.Entry(second_frame, textvariable =  NrEnel ,width = 10,font=('Arial 10'),borderwidth=5)
+
+NrEnel.grid(row=15, column=1,sticky='w')
+
+#------------------------------------- UfEnel
+UfEnel_entry = tk.Label(second_frame, 
+         text="UF :",font=('Arial', 10,'bold'),pady=5,padx=10,fg="black", bg="white",
+                borderwidth=0).grid(row=16,sticky='e')
+UfEnel = tk.Entry(second_frame, textvariable =  UfEnel ,width = 8,font=('Arial 10'),borderwidth=5)
+UfEnel.bind("<FocusIn>", lambda args: UfEnel.delete('0', 'end'))
+UfEnel.grid(row=16, column=1,sticky='w')
+
 
 #------------------------------------- Complemento
 ComplementoEnel_entry = tk.Label(second_frame, 
          text="Complemento :",font=('Arial', 10,'bold'),pady=5,padx=10,fg="black", bg="white",
-                borderwidth=0).grid(row=16,sticky='e')
+                borderwidth=0).grid(row=17,sticky='e')
 ComplementoEnel = tk.Entry(second_frame, textvariable =  ComplementoEnel ,width = 30,font=('Arial 10'),borderwidth=5)
-ComplementoEnel.grid(row=16, column=1,sticky='w')
+ComplementoEnel.grid(row=17, column=1,sticky='w')
 
 #------------------------------------- LocalizacaoEnel
 LocalizacaoEnel_entry = tk.Label(second_frame, 
          text="Coordenadas :",font=('Arial', 10,'bold'),pady=5,padx=10,fg="black", bg="white",
-                borderwidth=0).grid(row=17,sticky='e')
+                borderwidth=0).grid(row=18,sticky='e')
 LocalizacaoEnel = tk.Entry(second_frame, textvariable =  LocalizacaoEnel ,width = 30,font=('Arial 10'),borderwidth=5)
-LocalizacaoEnel.grid(row=17, column=1,sticky='w')
+LocalizacaoEnel.grid(row=18, column=1,sticky='w')
 
 
 '''****************************************CONFIGURAÇÃO DA USINA **************************************************'''
@@ -1584,105 +1630,100 @@ PrevisaoEnergizacao.grid(row=35, column=3,sticky='w')
 #------------------------------------- titular uc
 TitularUc_entry = tk.Label(second_frame, 
          text="Titular UC :",font=('Arial', 10,'bold'),pady=5,padx=10,fg="black", bg="white",
-                borderwidth=0).grid(row=19,sticky='e')
+                borderwidth=0).grid(row=20,sticky='e')
 TitularUc = tk.Entry(second_frame, textvariable =  TitularUc ,width = 30,font=('Arial 10'),borderwidth=5)
-TitularUc.grid(row=19, column=1,sticky='w') 
+TitularUc.grid(row=20, column=1,sticky='w') 
 
 
 #------------------------------------- RuaTitular
 RuaTitular_entry = tk.Label(second_frame, 
          text="Rua :",font=('Arial', 10,'bold'),pady=5,padx=10,fg="black", bg="white",
-                borderwidth=0).grid(row=20,sticky='e')
+                borderwidth=0).grid(row=21,sticky='e')
 RuaTitular = tk.Entry(second_frame, textvariable =  RuaTitular ,width = 30,font=('Arial 10'),borderwidth=5)
 RuaTitular.bind("<FocusIn>", lambda args: RuaTitular.delete('0', 'end'))
-RuaTitular.grid(row=20, column=1,sticky='w') 
+RuaTitular.grid(row=21, column=1,sticky='w') 
 
 #------------------------------------- CidadeTitular
 CidadeTitular_entry = tk.Label(second_frame, 
          text="Cidade :",font=('Arial', 10,'bold'),pady=5,padx=10,fg="black", bg="white",
-                borderwidth=0).grid(row=21,sticky='e')
+                borderwidth=0).grid(row=22,sticky='e')
 CidadeTitular = tk.Entry(second_frame, textvariable =  CidadeTitular ,width = 30,font=('Arial 10'),borderwidth=5)
 CidadeTitular.bind("<FocusIn>", lambda args: CidadeTitular.delete('0', 'end'))
-CidadeTitular.grid(row=21, column=1,sticky='w') 
-
-
-#------------------------------------- NrTitular
-NrTitular_entry = tk.Label(second_frame, 
-         text="N° :",font=('Arial', 10,'bold'),pady=5,padx=10,fg="black", bg="white",
-                borderwidth=0).grid(row=22,sticky='e')
-NrTitular = tk.Entry(second_frame, textvariable =  NrTitular ,width = 10,font=('Arial 10'),borderwidth=5)
-NrTitular.grid(row=22, column=1,sticky='w') 
-
-
-#------------------------------------- BairroTitular
-BairroTitular_entry = tk.Label(second_frame, 
-         text="Bairro :",font=('Arial', 10,'bold'),pady=5,padx=10,fg="black", bg="white",
-                borderwidth=0).grid(row=23,sticky='e')
-BairroTitular = tk.Entry(second_frame, textvariable =  BairroTitular ,width = 30,font=('Arial 10'),borderwidth=5)
-BairroTitular.bind("<FocusIn>", lambda args: BairroTitular.delete('0', 'end'))
-BairroTitular.grid(row=23, column=1,sticky='w') 
+CidadeTitular.grid(row=22, column=1,sticky='w') 
 
 #------------------------------------- CepTitular
 CepTitular_entry = tk.Label(second_frame, 
          text="CEP :",font=('Arial', 10,'bold'),pady=5,padx=10,fg="black", bg="white",
-                borderwidth=0).grid(row=24,sticky='e')
+                borderwidth=0).grid(row=23,sticky='e')
 CepTitular = tk.Entry(second_frame, textvariable =  CepTitular ,width = 18,font=('Arial 10'),borderwidth=5)
 CepTitular.bind("<FocusOut>",EnderecoDinamicoTitular)
-CepTitular.grid(row=24, column=1,sticky='w')
-
+CepTitular.grid(row=23, column=1,sticky='w')
+#------------------------------------- BairroTitular
+BairroTitular_entry = tk.Label(second_frame, 
+         text="Bairro :",font=('Arial', 10,'bold'),pady=5,padx=10,fg="black", bg="white",
+                borderwidth=0).grid(row=24,sticky='e')
+BairroTitular = tk.Entry(second_frame, textvariable =  BairroTitular ,width = 30,font=('Arial 10'),borderwidth=5)
+BairroTitular.bind("<FocusIn>", lambda args: BairroTitular.delete('0', 'end'))
+BairroTitular.grid(row=24, column=1,sticky='w') 
+#------------------------------------- NrTitular
+NrTitular_entry = tk.Label(second_frame, 
+         text="N° :",font=('Arial', 10,'bold'),pady=5,padx=10,fg="black", bg="white",
+                borderwidth=0).grid(row=25,sticky='e')
+NrTitular = tk.Entry(second_frame, textvariable =  NrTitular ,width = 10,font=('Arial 10'),borderwidth=5)
+NrTitular.grid(row=25, column=1,sticky='w')
 #------------------------------------- ComplementoTitular
 ComplementoTitular_entry = tk.Label(second_frame, 
          text="Complemento :",font=('Arial', 10,'bold'),pady=5,padx=10,fg="black", bg="white",
-                borderwidth=0).grid(row=25,sticky='e')
+                borderwidth=0).grid(row=26,sticky='e')
 ComplementoTitular = tk.Entry(second_frame, textvariable = ComplementoTitular ,width = 30,font=('Arial 10'),borderwidth=5)
-ComplementoTitular.grid(row=25, column=1,sticky='w')
+ComplementoTitular.grid(row=26, column=1,sticky='w')
 
 #------------------------------------- UfTitular
 UfTitular_entry = tk.Label(second_frame, 
          text="UF :",font=('Arial', 10,'bold'),pady=5,padx=10,fg="black", bg="white",
-                borderwidth=0).grid(row=26,sticky='e')
+                borderwidth=0).grid(row=27,sticky='e')
 UfTitular = tk.Entry(second_frame, textvariable = UfTitular ,width = 8,font=('Arial 10'),borderwidth=5)
 UfTitular.bind("<FocusIn>", lambda args: UfTitular.delete('0', 'end'))
-UfTitular.grid(row=26, column=1,sticky='w')
+UfTitular.grid(row=27, column=1,sticky='w')
 
 
 #------------------------------------- TelefoneTitular
 TelefoneTitular_entry = tk.Label(second_frame, 
          text="Telefone :",font=('Arial', 10,'bold'),pady=5,padx=10,fg="black", bg="white",
-                borderwidth=0).grid(row=27,sticky='e')
+                borderwidth=0).grid(row=28,sticky='e')
 TelefoneTitular = tk.Entry(second_frame, textvariable =  TelefoneTitular ,width = 25,font=('Arial 10'),borderwidth=5)
-TelefoneTitular.grid(row=27, column=1,sticky='w')
+TelefoneTitular.grid(row=28, column=1,sticky='w')
 
 #------------------------------------- EmailTitular
 EmailTitular_entry = tk.Label(second_frame, 
          text="Email :",font=('Arial', 10,'bold'),pady=5,padx=10,fg="black", bg="white",
-                borderwidth=0).grid(row=28,sticky='e')
+                borderwidth=0).grid(row=29,sticky='e')
 EmailTitular = tk.Entry(second_frame, textvariable =  EmailTitular ,width = 30,font=('Arial 10'),borderwidth=5)
-EmailTitular.grid(row=28, column=1,sticky='w')
+EmailTitular.grid(row=29, column=1,sticky='w')
 
 #------------------------------------- InscricaoMunicipal
 InscricaoMunicipal_entry = tk.Label(second_frame, 
          text="Inscrição Municipal :",font=('Arial', 10,'bold'),pady=5,padx=10,fg="black", bg="white",
-                borderwidth=0).grid(row=29,sticky='e')
+                borderwidth=0).grid(row=30,sticky='e')
 InscricaoMunicipal = tk.Entry(second_frame, textvariable = InscricaoMunicipal ,width = 20,font=('Arial 10'),borderwidth=5)
-InscricaoMunicipal.grid(row=29, column=1,sticky='w')
+InscricaoMunicipal.grid(row=30, column=1,sticky='w')
 
 
 #------------------------------------- InscricaoEstadual
 InscricaoEstadual_entry = tk.Label(second_frame, 
          text="Inscrição Estadual :",font=('Arial', 10,'bold'),pady=5,padx=10,fg="black", bg="white",
-                borderwidth=0).grid(row=30,sticky='e')
+                borderwidth=0).grid(row=31,sticky='e')
 InscricaoEstadual = tk.Entry(second_frame, textvariable = InscricaoEstadual ,width = 20,font=('Arial 10'),borderwidth=5)
-InscricaoEstadual.grid(row=30, column=1,sticky='w')
+InscricaoEstadual.grid(row=31, column=1,sticky='w')
 
 
 
 #------------------------------------- CodigoCNAE
 CodigoCNAE_entry = tk.Label(second_frame, 
          text="Código CNAE :",font=('Arial', 10,'bold'),pady=5,padx=10,fg="black", bg="white",
-                borderwidth=0).grid(row=31,sticky='e')
+                borderwidth=0).grid(row=32,sticky='e')
 CodigoCNAE = tk.Entry(second_frame, textvariable =  CodigoCNAE ,width = 30,font=('Arial 10'),borderwidth=5)
-CodigoCNAE.grid(row=31, column=1,sticky='w')
+CodigoCNAE.grid(row=32, column=1,sticky='w')
 
 
 #------------------------------------- DescricaoAtividade
@@ -1941,17 +1982,19 @@ root.mainloop()
 
 
 
-# In[1]:
 
 
 from IPython.display import display, HTML
 display(HTML("<style>.container { width:100% !important; }</style>"))
 
 
-# In[33]:
+
 
 
 #************************************ PREENCHENDO FOE*****************************************************     
+
+
+
 
 
 # In[ ]:
