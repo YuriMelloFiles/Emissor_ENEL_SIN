@@ -1,13 +1,7 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[57]:
-
-
-#!/usr/bin/env python
-# coding: utf-8
-
-# In[37]:
+# In[ ]:
 
 
 
@@ -802,6 +796,9 @@ def imp():
                     i.value = b 
                 if '$InscricaoEstadual' in b :
                     b = b.replace('$InscricaoEstadual' , InscricaoEstadual.get())
+                    i.value = b 
+                if '$InscricaoMunicipal' in b :
+                    b = b.replace('$InscricaoMunicipal' , InscricaoMunicipal.get())
                     i.value = b 
                 if '$CNPJ' in b :
                     b = b.replace('$CNPJ' , CNPJ.get())
@@ -2128,16 +2125,4 @@ root.mainloop()
 
 from IPython.display import display, HTML
 display(HTML("<style>.container { width:100% !important; }</style>"))
-
-
-# In[33]:
-
-
-#************************************ PREENCHENDO FOE*****************************************************     
-
-
-# In[ ]:
-
-
-
 
